@@ -23,6 +23,15 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 
 처음 실행하면 **연구실 서버 아이디**를 묻습니다. ORCA 계산 번들의 서버 경로(`/home/<아이디>/…`)를 이 아이디로 만듭니다.
 
+## 업데이트 (이미 설치한 경우)
+1. MolStudio를 종료합니다.
+2. **처음 설치할 때와 같은 명령**을 다시 실행합니다. 명령은 항상 최신 버전(`latest`)을 받습니다.
+   - Mac: 기존 `/Applications/MolStudio.app`을 새 버전으로 바꿉니다. 바꾸기 전에 확인을 묻고, 이전 버전은 휴지통으로 옮깁니다.
+   - Windows: 새 설치 프로그램이 같은 위치에 덮어 설치합니다. 먼저 제거할 필요는 없습니다.
+3. 연구실 아이디, 보기 설정, 최근 파일 같은 설정은 그대로 남습니다(앱 바깥에 저장돼 있습니다).
+
+1.0.0부터는 앱의 **Help ▸ Check for Updates…**로 새 버전이 있는지 확인할 수 있습니다. 새 버전이 있으면 위 명령을 보여 주고 복사 버튼을 줍니다. 앱이 직접 내려받거나 실행하지는 않습니다.
+
 ## 보안: 스크립트가 하는 일과 하지 않는 일
 
 - **해시 고정**: 설치 스크립트는 릴리스를 게시할 때 만들어지고, 그 릴리스 설치 파일의 SHA-256 값이 스크립트 안에 들어 있습니다. 받은 파일의 해시가 다르면 실행하지 않고 지웁니다.
@@ -49,13 +58,13 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 [GitHub CLI](https://cli.github.com)(`gh`)가 있으면, 실행 전에 스크립트가 이 저장소에서 게시된 원본인지 GitHub 서명(release attestation)으로 확인할 수 있습니다.
 
 ```bash
-TAG=v0.3.1
+TAG=v1.0.0
 gh release download "$TAG" -R KNIPKCALB/molstudio-releases -p install.sh
 gh release verify-asset "$TAG" install.sh -R KNIPKCALB/molstudio-releases && bash install.sh
 ```
 Windows (PowerShell):
 ```powershell
-$TAG = 'v0.3.1'
+$TAG = 'v1.0.0'
 gh release download $TAG -R KNIPKCALB/molstudio-releases -p install.ps1
 gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?) { & ([scriptblock]::Create((Get-Content -Raw install.ps1))) }
 ```
