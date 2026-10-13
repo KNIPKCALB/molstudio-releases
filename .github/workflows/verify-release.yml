@@ -19,15 +19,21 @@ jobs:
         os: [windows-latest, macos-14]
     runs-on: ${{ matrix.os }}
     env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
       BASE: https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name || inputs.tag }}
     steps:
       # No third-party actions: everything below is plain shell against the public release URLs.
+      - name: Check tag format
+        shell: bash
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || { echo "bad tag: $TAG"; exit 1; }
       - name: "macOS: one-line install"
         if: runner.os == 'macOS'
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL "$BASE/install.sh" | bash -s -- --mac --yes
+          cd "$RUNNER_TEMP"
+          curl --proto '=https' --tlsv1.2 -fsSL -o molstudio-install.sh "$BASE/install.sh" && bash molstudio-install.sh --mac --yes
           codesign --verify --deep --strict /Applications/MolStudio.app
           lipo -archs /Applications/MolStudio.app/Contents/MacOS/MolStudio
           test -z "$(xattr -p com.apple.quarantine /Applications/MolStudio.app 2>/dev/null || true)" || echo "quarantine attribute present"
@@ -45,21 +51,26 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/dl" && cd "$RUNNER_TEMP/dl"
-          curl -fsSL "$BASE/install.sh" | bash -s -- --windows --yes --dir "$RUNNER_TEMP/dl"
-          curl -fsSLO "$BASE/SHA256SUMS"
+          curl --proto '=https' --tlsv1.2 -fsSL "$BASE/install.sh" | bash -s -- --windows --yes --dir "$RUNNER_TEMP/dl"
+          curl --proto '=https' --tlsv1.2 -fsSLO "$BASE/SHA256SUMS"
           grep windows SHA256SUMS | shasum -a 256 -c -
       - name: "macOS: tampered hash must abort"
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          set -uo pipefail
-          curl -fsSL "$BASE/install.sh" -o "$RUNNER_TEMP/install.sh"
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -fsSL "$BASE/install.sh" -o "$RUNNER_TEMP/install.sh"
           sed -i '' -E 's/^MAC_SHA256="[0-9a-f]{64}"/MAC_SHA256="0000000000000000000000000000000000000000000000000000000000000000"/' "$RUNNER_TEMP/install.sh"
           grep -q '^MAC_SHA256="0\{64\}"' "$RUNNER_TEMP/install.sh"
-          if bash "$RUNNER_TEMP/install.sh" --mac --yes --app-dir "$RUNNER_TEMP/tamper"; then
-            echo "tampered install was NOT stopped"; exit 1
-          fi
+          bash -n "$RUNNER_TEMP/install.sh"
+          set +e
+          out="$(bash "$RUNNER_TEMP/install.sh" --mac --yes --app-dir "$RUNNER_TEMP/tamper" 2>&1)"; rc=$?
+          set -e
+          printf '%s\n' "$out"
+          [ "$rc" -ne 0 ] || { echo "tampered install was NOT stopped"; exit 1; }
+          printf '%s' "$out" | grep -q 'SHA-256 불일치' || { echo "failed for another reason than the hash check"; exit 1; }
           test ! -e "$RUNNER_TEMP/tamper/MolStudio.app"
+          test -z "$(ls -A "$RUNNER_TEMP/tamper" 2>/dev/null)"
           echo "tampered download rejected"
 
       - name: "Windows (PowerShell 5.1): one-line silent install"
@@ -68,6 +79,7 @@ jobs:
         run: |
           $env:MOLSTUDIO_TARGET = 'windows'; $env:MOLSTUDIO_SILENT = '1'
           irm "$env:BASE/install.ps1" | iex
+          if (Get-ChildItem ([IO.Path]::GetTempPath()) -Filter 'molstudio-*' -Directory) { throw 'temporary folder left behind' }
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\MolStudio\MolStudio.exe'
           if (-not (Test-Path $exe)) { throw "not installed at $exe" }
           Write-Host "installed: $exe"

@@ -6,7 +6,7 @@ MolStudio(분자 보기·편집, Gaussian/ORCA 입력 준비) 설치 파일을 �
 
 **Mac (Apple Silicon: M1 이후)**: 터미널에 붙여 넣기
 ```bash
-curl -fsSL https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/install.sh | bash
+curl --proto '=https' --tlsv1.2 -fsSL -o molstudio-install.sh https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/install.sh && bash molstudio-install.sh
 ```
 
 **Windows**: PowerShell에 붙여 넣기 (시작 메뉴 → "PowerShell")
@@ -30,7 +30,8 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 - **변경 불가 릴리스**: 이 저장소는 GitHub immutable releases를 켜 두어서, 게시된 릴리스의 파일과 태그는 바뀌지 않습니다. GitHub가 서명한 릴리스 증명(attestation)도 붙습니다.
 - **권한**: `sudo`를 쓰지 않습니다. Mac은 `/Applications`(쓰기 권한이 없으면 `~/Applications`)에만 설치합니다. 기존 앱은 휴지통으로 옮긴 뒤 바꿉니다.
 - **앱 검사**: Mac에서는 설치 전후에 앱 서명 봉인(`codesign --verify --deep --strict`)을 검사합니다. Apple Silicon이 아니면 설치를 멈춥니다.
-- **잘린 스크립트**: 스크립트는 끝까지 받은 다음에야 실행됩니다. 다운로드가 중간에 끊겨도 반쪽짜리 스크립트가 실행되지 않습니다.
+- **잘린 스크립트**: Mac 명령은 스크립트를 파일로 끝까지 받은 다음(`&&`) 실행합니다. 스크립트 전체가 하나의 블록이라 일부만 받은 파일은 문법 오류가 나서 아무것도 실행되지 않습니다. Windows의 `irm`도 전체를 받은 다음 실행합니다.
+- **설치 실패 시 복구**: Mac에서는 새 앱을 임시 이름으로 복사하고 검사한 뒤에 기존 앱과 바꿉니다. 바꾸다 실패하면 기존 앱을 되돌립니다. 기존 앱은 지우지 않고 휴지통으로 옮기며, 그게 안 되면 `MolStudio-previous-…`로 남겨 둡니다.
 - **자동 검증**: 릴리스를 게시할 때마다 이 저장소의 GitHub Actions가 실제 Windows(PowerShell 5.1·7)와 macOS에서 다음을 확인합니다.
   - 설치 명령이 동작하는지
   - 설치한 앱이 실행되는지
@@ -38,26 +39,36 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 
   결과는 [Actions](../../actions) 탭에 있습니다.
 
-### 직접 확인하고 설치하기
+### 이 방식이 보장하는 것과 보장하지 않는 것
 
-명령을 바로 실행하는 대신, 먼저 받아서 읽어 보고 실행할 수 있습니다.
+- **보장하는 것**: 설치 스크립트를 믿는다면, 스크립트가 받는 설치 파일은 그 릴리스에 게시된 원본입니다. 받는 도중 바뀌었거나 깨졌다면 설치하지 않습니다.
+- **보장하지 않는 것**: 스크립트 자체는 검증 없이 실행됩니다. 이 GitHub 계정이 탈취되면 공격자가 새 `latest` 버전을 올릴 수 있습니다. 이미 게시된 버전은 바꿀 수 없습니다.
 
-```bash
-curl -fsSLO https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/install.sh
-less install.sh          # 내용 확인
-bash install.sh
-```
+### 가장 안전한 방법: 버전 고정 + GitHub 서명 확인
 
-[GitHub CLI](https://cli.github.com)가 있으면 받은 파일이 이 저장소 릴리스의 원본인지 GitHub 서명으로 확인할 수 있습니다.
+[GitHub CLI](https://cli.github.com)(`gh`)가 있으면, 실행 전에 스크립트가 이 저장소에서 게시된 원본인지 GitHub 서명(release attestation)으로 확인할 수 있습니다.
 
 ```bash
-gh release verify-asset v0.3.0 MolStudio-0.3.0-macos-arm64.dmg -R KNIPKCALB/molstudio-releases
-shasum -a 256 -c SHA256SUMS      # Windows: Get-FileHash <파일> -Algorithm SHA256
+TAG=v0.3.1
+gh release download "$TAG" -R KNIPKCALB/molstudio-releases -p install.sh
+gh release verify-asset "$TAG" install.sh -R KNIPKCALB/molstudio-releases && bash install.sh
 ```
+Windows (PowerShell):
+```powershell
+$TAG = 'v0.3.1'
+gh release download $TAG -R KNIPKCALB/molstudio-releases -p install.ps1
+gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?) { & ([scriptblock]::Create((Get-Content -Raw install.ps1))) }
+```
+설치 파일만 직접 받을 때는 `shasum -a 256 -c SHA256SUMS`(Windows: `Get-FileHash <파일> -Algorithm SHA256`)로 확인하거나, `gh release verify-asset`을 씁니다.
 
 ### 서명에 대해
 
-앱은 유료 개발자 인증서로 서명돼 있지 않습니다(Apple Developer ID와 Windows 코드 서명 모두 없음). 설치 스크립트로 설치하면 위의 해시 검사가 그 역할을 대신합니다. 릴리스 페이지에서 파일을 직접 받으면 처음 한 번은 경고가 나옵니다.
+앱은 유료 개발자 인증서로 서명돼 있지 않습니다. Mac은 ad-hoc 서명만 있고 Apple Developer ID와 공증(notarization)이 없으며, Windows는 Authenticode 서명이 없습니다.
+- 해시 검사와 GitHub 서명은 **파일이 게시된 원본인지**를 확인할 뿐입니다. Apple이나 Microsoft가 보증하는 **게시자 확인을 대신하지는 않습니다.**
+- 설치 스크립트는 macOS 격리 속성(quarantine)을 지우지 않습니다. `curl`로 받은 파일에는 원래 이 속성이 붙지 않을 뿐입니다.
+- 격리 속성을 직접 지우거나 Gatekeeper를 끄는 방법은 권하지 않습니다.
+
+릴리스 페이지에서 파일을 직접 받으면 처음 한 번은 경고가 나옵니다.
 
 - **Mac**: 시스템 설정 → 개인정보 보호 및 보안 → "그래도 열기"
 - **Windows**: "추가 정보" → "실행"
