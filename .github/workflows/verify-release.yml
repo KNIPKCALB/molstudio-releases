@@ -1,0 +1,106 @@
+name: verify-release
+# Runs the published one-line installers on real Windows and macOS machines
+# every time a release is published, plus a tampered-hash check that must fail.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "release tag, e.g. v0.3.0"
+        required: true
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      BASE: https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      # No third-party actions: everything below is plain shell against the public release URLs.
+      - name: "macOS: one-line install"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "$BASE/install.sh" | bash -s -- --mac --yes
+          codesign --verify --deep --strict /Applications/MolStudio.app
+          lipo -archs /Applications/MolStudio.app/Contents/MacOS/MolStudio
+          test -z "$(xattr -p com.apple.quarantine /Applications/MolStudio.app 2>/dev/null || true)" || echo "quarantine attribute present"
+      - name: "macOS: app starts"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          /Applications/MolStudio.app/Contents/MacOS/MolStudio & pid=$!
+          sleep 20
+          kill -0 "$pid"
+          kill "$pid"
+      - name: "macOS: Windows installer download + checksums"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dl" && cd "$RUNNER_TEMP/dl"
+          curl -fsSL "$BASE/install.sh" | bash -s -- --windows --yes --dir "$RUNNER_TEMP/dl"
+          curl -fsSLO "$BASE/SHA256SUMS"
+          grep windows SHA256SUMS | shasum -a 256 -c -
+      - name: "macOS: tampered hash must abort"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -uo pipefail
+          curl -fsSL "$BASE/install.sh" -o "$RUNNER_TEMP/install.sh"
+          sed -i '' -E 's/^MAC_SHA256="[0-9a-f]{64}"/MAC_SHA256="0000000000000000000000000000000000000000000000000000000000000000"/' "$RUNNER_TEMP/install.sh"
+          grep -q '^MAC_SHA256="0\{64\}"' "$RUNNER_TEMP/install.sh"
+          if bash "$RUNNER_TEMP/install.sh" --mac --yes --app-dir "$RUNNER_TEMP/tamper"; then
+            echo "tampered install was NOT stopped"; exit 1
+          fi
+          test ! -e "$RUNNER_TEMP/tamper/MolStudio.app"
+          echo "tampered download rejected"
+
+      - name: "Windows (PowerShell 5.1): one-line silent install"
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:MOLSTUDIO_TARGET = 'windows'; $env:MOLSTUDIO_SILENT = '1'
+          irm "$env:BASE/install.ps1" | iex
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\MolStudio\MolStudio.exe'
+          if (-not (Test-Path $exe)) { throw "not installed at $exe" }
+          Write-Host "installed: $exe"
+      - name: "Windows: app starts"
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\MolStudio\MolStudio.exe'
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 25
+          if ($p.HasExited) { throw "MolStudio exited with $($p.ExitCode)" }
+          Stop-Process -Id $p.Id -Force
+      - name: "Windows (PowerShell 7): macOS image download + checksums"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:MOLSTUDIO_TARGET = 'mac'; $env:MOLSTUDIO_DIR = "$env:RUNNER_TEMP\dl"
+          irm "$env:BASE/install.ps1" | iex
+          $sums = (irm "$env:BASE/SHA256SUMS") -split "`n" | Where-Object { $_ -match 'macos' }
+          $want, $name = ($sums -split '\s+')[0, 1]
+          $got = (Get-FileHash -Algorithm SHA256 (Join-Path "$env:RUNNER_TEMP\dl" $name)).Hash.ToLower()
+          if ($got -ne $want) { throw "checksum mismatch for $name" }
+          Write-Host "macOS image OK: $got"
+      - name: "Windows: tampered hash must abort"
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $text = irm "$env:BASE/install.ps1"
+          $bad = $text -replace "Sha256 = '[0-9a-f]{64}' }\s*\r?\n\s*mac", ("Sha256 = '" + ('0' * 64) + "' }`n        mac")
+          if ($bad -eq $text) { throw 'could not tamper with the script' }
+          $env:MOLSTUDIO_TARGET = 'windows'; $env:MOLSTUDIO_SILENT = '1'; $env:MOLSTUDIO_DOWNLOAD_ONLY = ''
+          $before = (Get-Item (Join-Path $env:LOCALAPPDATA 'Programs\MolStudio\MolStudio.exe')).LastWriteTimeUtc
+          try { Invoke-Expression $bad; throw 'tampered install was NOT stopped' }
+          catch { if ($_.Exception.Message -notmatch 'SHA-256 mismatch') { throw } ; Write-Host "tampered download rejected" }
+          $after = (Get-Item (Join-Path $env:LOCALAPPDATA 'Programs\MolStudio\MolStudio.exe')).LastWriteTimeUtc
+          if ($before -ne $after) { throw 'installer ran despite the bad hash' }
