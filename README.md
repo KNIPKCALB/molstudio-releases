@@ -1,25 +1,30 @@
 # MolStudio 배포
 
-MolStudio(분자 보기·편집, Gaussian/ORCA 입력 준비) 설치 파일을 받는 곳입니다. 소스 코드는 비공개이고, 이 저장소에는 설치 파일과 설치 스크립트만 올라갑니다.
+MolStudio(분자·결정 구조 보기·편집, Gaussian/ORCA/VASP 계산 준비) 설치 파일을 받는 곳입니다. 소스 코드는 비공개이고, 이 저장소에는 설치 파일과 설치 스크립트만 올라갑니다.
+
+**2.0**은 앱 전체를 Rust로 새로 만든 버전입니다. 그림은 GPU(Mac은 Metal, Windows는 DirectX 12/Vulkan)로 그려서 원자가 수만~수십만 개여도 부드럽게 돌아가고, 설치 파일이 작고 빨리 뜹니다. 1.x(Python)의 메뉴와 기능을 그대로 옮겼고, ORCA 계산 번들은 1.x와 같은 파일을 만듭니다.
+
+**필요 환경**
+- Mac: Apple Silicon(M1 이후), macOS 11 Big Sur 이상. Intel Mac은 지원하지 않습니다.
+- Windows: Windows 10 이상, 64비트(x64). DirectX 12 또는 Vulkan을 지원하는 그래픽 드라이버가 필요합니다.
 
 ## 설치
 
-**Mac (Apple Silicon: M1 이후)**: 터미널에 붙여 넣기
+**Mac (Apple Silicon: M1 이후, macOS 11 이상)**: 터미널에 붙여 넣기
 ```bash
 curl --proto '=https' --tlsv1.2 -fsSL -o molstudio-install.sh https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/install.sh && bash molstudio-install.sh
 ```
 
-**Windows**: PowerShell에 붙여 넣기 (시작 메뉴 → "PowerShell")
+**Windows (10 이상, 64비트)**: PowerShell에 붙여 넣기 (시작 메뉴 → "PowerShell")
 ```powershell
 irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/install.ps1 | iex
 ```
 
-실행하면 무엇을 받을지 고르는 메뉴가 나옵니다.
+고를 것 없이 **명령을 붙여 넣은 컴퓨터에 맞는 버전**이 깔립니다. Mac 터미널이면 Mac 앱(`/Applications`), Windows PowerShell이면 Windows 설치 마법사입니다.
 
-| 실행한 곳 | 1번 | 2번 |
-|---|---|---|
-| Mac 터미널 | macOS 설치 (`/Applications`에 설치) | Windows 설치 파일만 받기 (`~/Downloads`) |
-| Windows PowerShell | Windows 설치 (설치 마법사 실행) | Mac 디스크 이미지만 받기 (`Downloads`) |
+다른 컴퓨터용 파일만 받아 옮기려면:
+- Mac에서 Windows 설치 파일 받기: 위 Mac 명령 끝에 ` --windows`를 붙입니다 (`~/Downloads`에 저장).
+- Windows에서 Mac 디스크 이미지 받기: 먼저 `$env:MOLSTUDIO_TARGET = 'mac'`을 실행한 뒤 위 Windows 명령을 실행합니다 (`Downloads`에 저장).
 
 처음 실행하면 **연구실 서버 아이디**를 묻습니다. ORCA 계산 번들의 서버 경로(`/home/<아이디>/…`)를 이 아이디로 만듭니다.
 
@@ -29,6 +34,7 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
    - Mac: 기존 `/Applications/MolStudio.app`을 새 버전으로 바꿉니다. 바꾸기 전에 확인을 묻고, 이전 버전은 휴지통으로 옮깁니다.
    - Windows: 새 설치 프로그램이 같은 위치에 덮어 설치합니다. 먼저 제거할 필요는 없습니다.
 3. 연구실 아이디, 보기 설정, 최근 파일 같은 설정은 그대로 남습니다(앱 바깥에 저장돼 있습니다).
+   - 1.x에서 2.0으로 올릴 때는 연구실 아이디만 옮겨 옵니다. 보기 설정과 최근 파일은 2.0에서 새로 시작합니다.
 
 1.0.0부터는 앱의 **Help ▸ Check for Updates…**로 새 버전이 있는지 확인할 수 있습니다. 새 버전이 있으면 위 명령을 보여 주고 복사 버튼을 줍니다. 앱이 직접 내려받거나 실행하지는 않습니다.
 
@@ -58,13 +64,13 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 [GitHub CLI](https://cli.github.com)(`gh`)가 있으면, 실행 전에 스크립트가 이 저장소에서 게시된 원본인지 GitHub 서명(release attestation)으로 확인할 수 있습니다.
 
 ```bash
-TAG=v1.0.0
+TAG=v2.0.0
 gh release download "$TAG" -R KNIPKCALB/molstudio-releases -p install.sh
 gh release verify-asset "$TAG" install.sh -R KNIPKCALB/molstudio-releases && bash install.sh
 ```
 Windows (PowerShell):
 ```powershell
-$TAG = 'v1.0.0'
+$TAG = 'v2.0.0'
 gh release download $TAG -R KNIPKCALB/molstudio-releases -p install.ps1
 gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?) { & ([scriptblock]::Create((Get-Content -Raw install.ps1))) }
 ```
@@ -84,8 +90,8 @@ gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?
 
 ## 제거
 
-- **Mac**: `/Applications/MolStudio.app`을 휴지통으로 옮기면 됩니다. 설정까지 지우려면 `~/Library/Preferences/com.molstudio.MolStudio.plist`도 지웁니다.
-- **Windows**: 설정 → 앱 → MolStudio → 제거
+- **Mac**: `/Applications/MolStudio.app`을 휴지통으로 옮기면 됩니다. 설정까지 지우려면 `~/Library/Application Support/MolStudio` 폴더와 (1.x를 썼다면) `~/Library/Preferences/com.molstudio.MolStudio.plist`도 지웁니다.
+- **Windows**: 설정 → 앱 → MolStudio → 제거. 설정까지 지우려면 `%APPDATA%\MolStudio` 폴더도 지웁니다.
 
 ## 버전
 
