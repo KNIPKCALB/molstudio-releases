@@ -26,7 +26,7 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 - Mac에서 Windows 설치 파일 받기: 위 Mac 명령 끝에 ` --windows`를 붙입니다 (`~/Downloads`에 저장).
 - Windows에서 Mac 디스크 이미지 받기: 먼저 `$env:MOLSTUDIO_TARGET = 'mac'`을 실행한 뒤 위 Windows 명령을 실행합니다 (`Downloads`에 저장).
 
-처음 실행하면 **연구실 서버 아이디**를 묻습니다. ORCA 계산 번들의 서버 경로(`/home/<아이디>/…`)를 이 아이디로 만듭니다.
+처음 실행하면 **연구실 서버 아이디**를 묻습니다. **등록된 연구실 구성원의 아이디만** 받으며, 등록되지 않은 아이디로는 앱을 쓸 수 없습니다(2.1부터, 실행할 때마다 확인). ORCA 계산 번들의 서버 경로(`/home/<아이디>/…`)도 이 아이디로 만듭니다. 아이디가 거부되면 관리자에게 문의하세요.
 
 ## 업데이트 (이미 설치한 경우)
 1. MolStudio를 종료합니다.
