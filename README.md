@@ -64,13 +64,13 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 [GitHub CLI](https://cli.github.com)(`gh`)가 있으면, 실행 전에 스크립트가 이 저장소에서 게시된 원본인지 GitHub 서명(release attestation)으로 확인할 수 있습니다.
 
 ```bash
-TAG=v2.0.0
+TAG=v2.1.0
 gh release download "$TAG" -R KNIPKCALB/molstudio-releases -p install.sh
 gh release verify-asset "$TAG" install.sh -R KNIPKCALB/molstudio-releases && bash install.sh
 ```
 Windows (PowerShell):
 ```powershell
-$TAG = 'v2.0.0'
+$TAG = 'v2.1.0'
 gh release download $TAG -R KNIPKCALB/molstudio-releases -p install.ps1
 gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?) { & ([scriptblock]::Create((Get-Content -Raw install.ps1))) }
 ```
