@@ -2,7 +2,7 @@
 
 MolStudio(분자·결정 구조 보기·편집, Gaussian/ORCA/VASP 계산 준비) 설치 파일을 받는 곳입니다. 소스 코드는 비공개이고, 이 저장소에는 설치 파일과 설치 스크립트만 올라갑니다.
 
-**최신 버전: 2.2.0** — 화면을 더 또렷하게 바꿨습니다(진한 글씨, 영역·버튼 경계). 등록된 연구실 아이디로만 사용할 수 있습니다.
+**최신 버전: 2.3.0** — VESTA 스타일 원자 그림, 2D 구조식 편집기(CDXML·PDF·SVG 저장, Mac은 ChemDraw·PowerPoint로 복사·붙여넣기), NEB·궤적·진동 경로 영상(GIF, Mac은 MP4도), 에너지 eV 표시, 영어 화면, 정리된 메뉴(Gaussian/ORCA 입력은 File 메뉴), 함께 설치되는 명령줄 도구 `mscli`. 등록된 연구실 아이디로만 사용할 수 있습니다.
 
 2.x는 앱 전체를 Rust로 새로 만든 버전입니다. 그림은 GPU(Mac은 Metal, Windows는 DirectX 12/Vulkan)로 그려서 원자가 수만~수십만 개여도 부드럽게 돌아가고, 설치 파일이 작고 빨리 뜹니다. 1.x(Python)의 메뉴와 기능을 그대로 옮겼고, ORCA 계산 번들은 1.x와 같은 파일을 만듭니다.
 
@@ -30,6 +30,23 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 
 처음 실행하면 **연구실 서버 아이디**를 묻습니다. **등록된 연구실 구성원의 아이디만** 받으며, 등록되지 않은 아이디로는 앱을 쓸 수 없습니다(2.1부터, 실행할 때마다 확인). ORCA 계산 번들의 서버 경로(`/home/<아이디>/…`)도 이 아이디로 만듭니다. 아이디가 거부되면 관리자에게 문의하세요.
 
+## 명령줄 도구 `mscli` (2.3부터)
+
+앱과 함께 **`mscli`** 명령이 설치됩니다. 창을 열지 않고 앱과 같은 코드로 구조 파일을 읽고, 결과를 JSON으로 출력합니다. 스크립트나 Claude 같은 AI 도구가 쓰기 좋습니다. 앱처럼 등록된 연구실 아이디가 있어야 동작하므로, 앱을 한 번 실행해 아이디를 넣은 뒤 쓰세요.
+
+```bash
+mscli --help                          # 전체 명령
+mscli info TS.out                     # 분자식, 에너지(eV), 허수 진동수 …
+mscli check TS.out --expect ts        # 종료·SCF·최적화 수렴·허수 개수 판정
+mscli energies neb_MEP_trj.xyz --plot neb.png
+mscli thermo TS.out                   # ZPE·H·G (ORCA/Gaussian 출력과 같은 규칙)
+mscli vibrate TS.out ts.png --imaginary   # 허수 모드 화살표 그림
+```
+
+- Mac: 설치 명령이 `~/.local/bin/mscli`를 앱 안의 `mscli`에 연결하고, 필요하면 `~/.zprofile`에 PATH 한 줄을 추가합니다. 새 터미널 창에서 쓸 수 있습니다. 원하지 않으면 설치 명령 끝에 ` --no-cli`를 붙입니다.
+- Windows: 설치 폴더에 `mscli.exe`가 들어가고 PATH에 추가됩니다(설치 마법사에서 끌 수 있음). 새 PowerShell 창에서 쓸 수 있습니다.
+- 계산 제출 기능은 없습니다. Gaussian/ORCA 명령은 입력 파일 내용만 만듭니다. 기존 파일은 `--force` 없이는 덮어쓰지 않습니다.
+
 ## 업데이트 (이미 설치한 경우)
 1. MolStudio를 종료합니다.
 2. **처음 설치할 때와 같은 명령**을 다시 실행합니다. 명령은 항상 최신 버전(`latest`)을 받습니다.
@@ -45,7 +62,7 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 - **해시 고정**: 설치 스크립트는 릴리스를 게시할 때 만들어지고, 그 릴리스 설치 파일의 SHA-256 값이 스크립트 안에 들어 있습니다. 받은 파일의 해시가 다르면 실행하지 않고 지웁니다.
 - **받는 곳**: 파일은 HTTPS(TLS 1.2 이상)로 이 저장소의 해당 버전 릴리스에서만 받습니다.
 - **변경 불가 릴리스**: 이 저장소는 GitHub immutable releases를 켜 두어서, 게시된 릴리스의 파일과 태그는 바뀌지 않습니다. GitHub가 서명한 릴리스 증명(attestation)도 붙습니다.
-- **권한**: `sudo`를 쓰지 않습니다. Mac은 `/Applications`(쓰기 권한이 없으면 `~/Applications`)에만 설치합니다. 기존 앱은 휴지통으로 옮긴 뒤 바꿉니다.
+- **권한**: `sudo`를 쓰지 않습니다. Mac은 `/Applications`(쓰기 권한이 없으면 `~/Applications`)에만 설치합니다. 기존 앱은 휴지통으로 옮긴 뒤 바꿉니다. 앱 폴더 밖에서 바꾸는 것은 `mscli` 연결(`~/.local/bin/mscli`)과 `~/.zprofile`의 PATH 한 줄뿐입니다(`--no-cli`면 둘 다 하지 않음).
 - **앱 검사**: Mac에서는 설치 전후에 앱 서명 봉인(`codesign --verify --deep --strict`)을 검사합니다. Apple Silicon이 아니면 설치를 멈춥니다.
 - **잘린 스크립트**: Mac 명령은 스크립트를 파일로 끝까지 받은 다음(`&&`) 실행합니다. 스크립트 전체가 하나의 블록이라 일부만 받은 파일은 문법 오류가 나서 아무것도 실행되지 않습니다. Windows의 `irm`도 전체를 받은 다음 실행합니다.
 - **설치 실패 시 복구**: Mac에서는 새 앱을 임시 이름으로 복사하고 검사한 뒤에 기존 앱과 바꿉니다. 바꾸다 실패하면 기존 앱을 되돌립니다. 기존 앱은 지우지 않고 휴지통으로 옮기며, 그게 안 되면 `MolStudio-previous-…`로 남겨 둡니다.
@@ -66,13 +83,13 @@ irm https://github.com/KNIPKCALB/molstudio-releases/releases/latest/download/ins
 [GitHub CLI](https://cli.github.com)(`gh`)가 있으면, 실행 전에 스크립트가 이 저장소에서 게시된 원본인지 GitHub 서명(release attestation)으로 확인할 수 있습니다.
 
 ```bash
-TAG=v2.2.0
+TAG=v2.3.0
 gh release download "$TAG" -R KNIPKCALB/molstudio-releases -p install.sh
 gh release verify-asset "$TAG" install.sh -R KNIPKCALB/molstudio-releases && bash install.sh
 ```
 Windows (PowerShell):
 ```powershell
-$TAG = 'v2.2.0'
+$TAG = 'v2.3.0'
 gh release download $TAG -R KNIPKCALB/molstudio-releases -p install.ps1
 gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?) { & ([scriptblock]::Create((Get-Content -Raw install.ps1))) }
 ```
@@ -92,8 +109,8 @@ gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?
 
 ## 제거
 
-- **Mac**: `/Applications/MolStudio.app`을 휴지통으로 옮기면 됩니다. 설정까지 지우려면 `~/Library/Application Support/MolStudio` 폴더와 (1.x를 썼다면) `~/Library/Preferences/com.molstudio.MolStudio.plist`도 지웁니다.
-- **Windows**: 설정 → 앱 → MolStudio → 제거. 설정까지 지우려면 `%APPDATA%\MolStudio` 폴더도 지웁니다.
+- **Mac**: `/Applications/MolStudio.app`을 휴지통으로 옮기고 `~/.local/bin/mscli` 연결을 지웁니다(`~/.zprofile`의 `# MolStudio: mscli` 줄도 지워도 됩니다). 설정까지 지우려면 `~/Library/Application Support/MolStudio` 폴더와 (1.x를 썼다면) `~/Library/Preferences/com.molstudio.MolStudio.plist`도 지웁니다.
+- **Windows**: 설정 → 앱 → MolStudio → 제거(PATH에 추가한 항목도 함께 지웁니다). 설정까지 지우려면 `%APPDATA%\MolStudio` 폴더도 지웁니다.
 
 ## 버전
 
