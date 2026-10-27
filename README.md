@@ -2,7 +2,7 @@
 
 MolStudio(분자·결정 구조 보기·편집, Gaussian/ORCA/VASP 계산 준비) 설치 파일을 받는 곳입니다. 소스 코드는 비공개이고, 이 저장소에는 설치 파일과 설치 스크립트만 올라갑니다.
 
-**최신 버전: 2.3.1** — `mscli view`(구조·NEB 경로·허수 진동을 폰에서 손가락으로 돌려 보는 HTML 파일 한 개, 인터넷 불필요), `mscli render --labels`(그림에 파일의 원자 번호 표시). 2.3.0: VESTA 스타일 원자 그림, 2D 구조식 편집기(CDXML·PDF·SVG 저장, Mac은 ChemDraw·PowerPoint로 복사·붙여넣기), NEB·궤적·진동 경로 영상(GIF, Mac은 MP4도), 에너지 eV 표시, 영어 화면, 정리된 메뉴(Gaussian/ORCA 입력은 File 메뉴), 함께 설치되는 명령줄 도구 `mscli`. 등록된 연구실 아이디로만 사용할 수 있습니다.
+**최신 버전: 2.3.2** — 툴바 도구를 기호로 표시하고 화면만 돌리는 마우스(Navigate) 모드 추가, Select 모드에서 선택한 원자를 우클릭 드래그로 회전. 2.3.1: `mscli view`(구조·NEB 경로·허수 진동을 폰에서 손가락으로 돌려 보는 HTML 파일 한 개, 인터넷 불필요), `mscli render --labels`(그림에 파일의 원자 번호 표시). 2.3.0: VESTA 스타일 원자 그림, 2D 구조식 편집기(CDXML·PDF·SVG 저장, Mac은 ChemDraw·PowerPoint로 복사·붙여넣기), NEB·궤적·진동 경로 영상(GIF, Mac은 MP4도), 에너지 eV 표시, 영어 화면, 정리된 메뉴(Gaussian/ORCA 입력은 File 메뉴), 함께 설치되는 명령줄 도구 `mscli`. 등록된 연구실 아이디로만 사용할 수 있습니다.
 
 2.x는 앱 전체를 Rust로 새로 만든 버전입니다. 그림은 GPU(Mac은 Metal, Windows는 DirectX 12/Vulkan)로 그려서 원자가 수만~수십만 개여도 부드럽게 돌아가고, 설치 파일이 작고 빨리 뜹니다. 1.x(Python)의 메뉴와 기능을 그대로 옮겼고, ORCA 계산 번들은 1.x와 같은 파일을 만듭니다.
 
@@ -83,13 +83,13 @@ mscli vibrate TS.out ts.png --imaginary   # 허수 모드 화살표 그림
 [GitHub CLI](https://cli.github.com)(`gh`)가 있으면, 실행 전에 스크립트가 이 저장소에서 게시된 원본인지 GitHub 서명(release attestation)으로 확인할 수 있습니다.
 
 ```bash
-TAG=v2.3.1
+TAG=v2.3.2
 gh release download "$TAG" -R KNIPKCALB/molstudio-releases -p install.sh
 gh release verify-asset "$TAG" install.sh -R KNIPKCALB/molstudio-releases && bash install.sh
 ```
 Windows (PowerShell):
 ```powershell
-$TAG = 'v2.3.1'
+$TAG = 'v2.3.2'
 gh release download $TAG -R KNIPKCALB/molstudio-releases -p install.ps1
 gh release verify-asset $TAG install.ps1 -R KNIPKCALB/molstudio-releases; if ($?) { & ([scriptblock]::Create((Get-Content -Raw install.ps1))) }
 ```
